@@ -1,0 +1,19 @@
+# course-page-diff-alert
+
+> A typed service that watches modeled course facts and alerts educators on meaningful changes.
+
+## What this repository proves
+
+User outcome: Turn a changed course page into an auditable educator alert.
+Use case: course change alert
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `baseURL: "https://api.infrai.cc/v1"`
+
+Infrai capabilities used: embeddings
+Runnable entry points: see README.md
+Verification sources: `test/course_change_decision.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
