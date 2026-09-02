@@ -21,9 +21,35 @@ function requiredApiKey(): string {
 }
 
 export async function fetchCoursePage(url: string): Promise<string> {
-  const response = await fetch(url, { method: "GET" });
-  if (!response.ok) throw new Error(`Course page returned HTTP ${response.status}`);
-  return response.text();
+  const response = await fetch(`${BASE_URL}/web/scrape`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${requiredApiKey()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url, format: "markdown" }),
+  });
+  const envelope: unknown = await response.json();
+
+  if (!envelope || typeof envelope !== "object") {
+    throw new InfraiError("Infrai returned an invalid scrape response", response.status);
+  }
+
+  const result = envelope as {
+    ok?: boolean;
+    data?: { content?: unknown };
+    error?: { message?: unknown; [key: string]: unknown };
+  };
+  if (!response.ok || result.ok === false) {
+    const message = typeof result.error?.message === "string"
+      ? result.error.message
+      : `Infrai scrape returned HTTP ${response.status}`;
+    throw new InfraiError(message, response.status, result.error);
+  }
+  if (typeof result.data?.content !== "string") {
+    throw new InfraiError("Infrai scrape response did not include page content", 502);
+  }
+  return result.data.content;
 }
 
 export async function embedSnapshot(text: string): Promise<number[]> {

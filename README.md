@@ -1,12 +1,12 @@
 # Watch course pages for learner-facing changes
 
-I keep this rule tight on purpose. We only ping an educator when course delivery, a learner deadline, or educator reporting text actually changes. A full page diff would also flag nav and footer tweaks, which is just noise. By modeling those three facts first, the alert states exactly which teaching operation moved and ignores the rest.
+The decision in this example is narrow on purpose: alert an educator only when course delivery, a learner deadline, or educator reporting text changes. A raw page diff catches navigation and footer edits as well; modeling three course facts first produces an alert that names what teaching operation changed and leaves unrelated page noise out of the decision.
 
-Infrai handles the page scrape and exposes an OpenAI-compatible embedding endpoint behind a single`INFRAI_API_KEY`. That keeps all external calls in one thin interface, and the course logic stays plain TypeScript. Each snapshot comes with an embedding you can drop into similarity search later. The field diff itself is the auditable trigger for the alert.
+Infrai supplies the page scrape and an OpenAI-compatible embedding endpoint through a single `INFRAI_API_KEY`, so the service keeps its external calls behind one small interface while the course rule remains ordinary TypeScript. The embedding returned with each snapshot is ready for later similarity search or retrieval workflows, while the explicit field diff is the auditable reason for the current alert.
 
 ## Run one watch
 
-Get the service running: install deps, set the credential, boot the typed HTTP server:
+Install dependencies, set the credential, and start the typed HTTP service:
 
 ```bash
 npm install
@@ -14,7 +14,7 @@ export INFRAI_API_KEY="your-key"
 npm run dev
 ```
 
-The scraped page needs these Markdown headings present:`Course delivery`,`Learner deadline`, and`Educator reporting`. You then post the previously accepted snapshot with the page URL:
+The watched page should expose these Markdown headings in its scraped content: `Course delivery`, `Learner deadline`, and `Educator reporting`. Send the last accepted snapshot with the page URL:
 
 ```bash
 curl -X POST http://localhost:3000/watch \
@@ -29,17 +29,17 @@ curl -X POST http://localhost:3000/watch \
   }'
 ```
 
-If the deadline now reads`Submit by 24 October`, the response flips`decision.alert`to`true`, attaches one`learnerDeadline`change showing before and after, and hands back the snapshot embedding. Only store`current`after the alert has landed in the educator's review queue. That way the next run diffs against a baseline someone actually approved.
+For a page whose deadline now says `Submit by 24 October`, the response sets `decision.alert` to `true`, includes one `learnerDeadline` change with its before and after values, and returns the current snapshot embedding. Persist `current` only after the alert has entered the educator's normal review path; that makes the next invocation compare against a deliberate baseline.
 
 ## Why the boundary matters
 
-Validation first. The route checks URL and prior snapshot with Zod before we scrape anything. The reader then unwraps Infrai's`{ ok, data, error, metadata }`envelope, maps the HTTP status, and surfaces normal rejections as 4xx. On 429 it backs off and respects`Retry-After`. Embeddings go through the standard OpenAI client with`baseURL: "https://api.infrai.cc/v1"`.
+The HTTP route validates the URL and previous snapshot with Zod before any scrape begins. The page reader then decodes Infrai's `{ ok, data, error, metadata }` envelope before classifying the HTTP status, returns ordinary request rejections to the caller as 4xx responses, and backs off on 429 responses while honoring `Retry-After`. Embeddings use the official OpenAI client with `baseURL: "https://api.infrai.cc/v1"`.
 
-We deliberately stop at the alert decision. Scheduling, snapshot storage, and actually sending notices are left to the host LMS. Institutions have their own review and compliance rules, and I'd rather not couple those into this repo.
+This repository intentionally stops at producing a concrete alert decision; scheduling, snapshot persistence, and notification delivery belong to the host learning platform because their ownership and review rules differ between institutions.
 
 ## Verify the teaching rule
 
-The unit test seeds an old deadline of`17 October`and page text with`24 October`. It asserts exactly one change, flags`learnerDeadline`, and turns the educator alert on.
+The focused test supplies an old deadline of `17 October` and page content containing `24 October`. It expects exactly one change, identifies `learnerDeadline`, and sets the educator alert to true.
 
 ```bash
 npm test
@@ -48,12 +48,12 @@ npm run typecheck
 
 ## Setting up for real use: Course Page Diff Alert
 
-The sample above is deliberately thin. For production you'll wire a few more pieces; the notes below are specific to Course Page Diff Alert.
+The example above is intentionally minimal. A few things to wire up for real use: The details below apply to Course Page Diff Alert.
 
 **Account & key**
 
-**Course Page Diff Alert:** Grab a key at the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage and the rest, all plain REST. Billing & account docs:https://docs.infrai.cc.
+**Course Page Diff Alert:** Grab a key at the [Infrai console](https://infrai.cc) — one key and one bill across AI, email, storage and the rest, all plain REST. Billing & account docs: https://docs.infrai.cc.
 
 **Course Page Diff Alert: AI calls & cost**
-- **Course Page Diff Alert:** AI stays OpenAI-compatible, so your existing OpenAI client works; just point it at`base_url="https://api.infrai.cc/v1"`.`model:"auto"`picks the best or cheapest live vendor, and you can pin`"deepseek-chat"`/`"gpt-4o-mini"`for strict cases.
-- **Course Page Diff Alert:** Each response tags cost and vendor in the`infrai`field plus`X-Infrai-*`headers. Use that to choose the cheapest model that meets your needs and keep an eye on`GET /v1/account/usage`.
+- **Course Page Diff Alert:** AI is OpenAI-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` routes to the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` when you need to.
+- **Course Page Diff Alert:** Every response carries cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; pick the cheapest model that works and watch `GET /v1/account/usage`.

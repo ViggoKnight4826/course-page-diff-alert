@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx src/course_watch_service.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/course_change_decision.test.ts"
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
     "express": "^5.1.0",
